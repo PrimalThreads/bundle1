@@ -55,9 +55,10 @@
 
     .modal { position: fixed; inset:0; display:none; align-items: center; justify-content: center; background: rgba(0,0,0,.5); padding: 20px; z-index: 50; }
     .modal.open { display:flex; }
-    .modal > .dialog { max-width: 760px; width: 100%; background:#fff; border-radius: 16px; box-shadow: var(--shadow); border:1px solid var(--line); }
+    .modal > .dialog { max-width: 920px; width: 100%; background:#fff; border-radius: 16px; box-shadow: var(--shadow); border:1px solid var(--line); }
     .dialog header { padding: 16px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content: space-between; }
     .dialog .content { padding: 18px; }
+    .size-img { width: 100%; height: auto; border-radius: 10px; border:1px solid var(--line); box-shadow: var(--shadow); }
 
     .link { color: #0a66c2; text-decoration: underline; }
     .inline { display:inline-flex; gap:10px; align-items:center; }
@@ -108,7 +109,7 @@
     </div>
   </div>
 
-  <!-- Size Guide Modal (fallback) -->
+  <!-- Size Guide Modal -->
   <div id="modal" class="modal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <header>
@@ -122,6 +123,7 @@
   <script>
   const FORM_ENDPOINT = "";
 
+  // Provide relative paths to JPEGs you'll upload to your repo (e.g., /sizeguides/*.jpg)
   const PRODUCTS = [
     {
       id: "JBS-6HVPS",
@@ -138,8 +140,8 @@
       ],
       sizes: ["2XS","XS","S","M","L","XL","2XL","3XL","4XL","5XL","6/7XL"],
       sizeGuide: {
-        externalUrl: "https://www.jbswear.com.au/product-detail/-in-product/6HVPS",
-        inline: null
+        image: "/sizeguides/6HVPS.jpg",
+        externalUrl: "https://www.jbswear.com.au/product-detail/-in-product/6HVPS"
       }
     },
     {
@@ -156,8 +158,8 @@
       ],
       sizes: ["XS","S","M","L","XL","2XL","3XL"],
       sizeGuide: {
-        externalUrl: "https://www.ascolour.com.au/staple-tee-5001/",
-        inline: null
+        image: "/sizeguides/5001.jpg",
+        externalUrl: "https://www.ascolour.com.au/staple-tee-5001/"
       }
     },
     {
@@ -173,8 +175,8 @@
       ],
       sizes: ["2XS","XS","S","M","L","XL","2XL","3XL","4XL","5XL","6/7XL","8/9XL","10/11XL","12/13XL"],
       sizeGuide: {
-        externalUrl: "https://www.jbswear.com.au/product-detail/-in-product/3FH",
-        inline: null
+        image: "/sizeguides/3FH.jpg",
+        externalUrl: "https://www.jbswear.com.au/product-detail/-in-product/3FH"
       }
     }
   ];
@@ -385,38 +387,51 @@
     if(!prod) return;
     const sg = prod.sizeGuide || {};
 
-    if(sg.externalUrl){
-      // Try quick-view popup
-      const w = window.open(sg.externalUrl, 'sizeGuide', 'width=920,height=720,noopener,resizable=yes,scrollbars=yes');
-      if(w){ try { w.focus(); } catch(e){} return; }
-      // Fallback to modal if popup blocked
-      $('#modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
-      modalContent.innerHTML = `
-        <p>Open the official size guide for <strong>${prod.name}</strong>:</p>
-        <p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>
-      `;
+    // Prepare modal title
+    document.getElementById('modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
+
+    // Try to load image first
+    if(sg.image){
+      const img = new Image();
+      img.className = 'size-img';
+      img.alt = `Size guide for ${prod.name}`;
+      img.onload = function(){
+        modalContent.innerHTML = '';
+        modalContent.appendChild(img);
+        if(sg.externalUrl){
+          const p = document.createElement('p');
+          p.innerHTML = `<a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">View on supplier site</a>`;
+          modalContent.appendChild(p);
+        }
+      };
+      img.onerror = function(){
+        // Fallback to link if image missing
+        if(sg.externalUrl){
+          modalContent.innerHTML = `<p class="muted">Size guide image not found. You can open it on the supplier’s site:</p>
+            <p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>`;
+        } else {
+          modalContent.innerHTML = `<p>No size guide image configured.</p>`;
+        }
+      };
+      img.src = sg.image;
+      // Open modal immediately while image loads
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
       return;
     }
-    // Inline (rare)
-    if (sg.inline){
-      $('#modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
-      const { caption, headers, rows, note } = sg.inline;
-      modalContent.innerHTML = `
-        <div style="overflow:auto;">
-          <table class="size-table" aria-label="Size guide table">
-            <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-            <tbody>
-              ${rows.map(r => `<tr>${r.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-        ${note ? `<p class="muted" style="margin-top:8px;">${note}</p>` : ''}
-      `;
+
+    // If no image, but external link provided
+    if(sg.externalUrl){
+      modalContent.innerHTML = `<p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>`;
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
+      return;
     }
+
+    // Nothing configured
+    modalContent.innerHTML = `<p>No size guide configured for this product yet.</p>`;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
   }
 
   function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
