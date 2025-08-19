@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bundle Colours & Sizes – Essential Tradie</title>
+  <style>
+    :root { --gap: 14px; --radius: 14px; --shadow: 0 6px 22px rgba(0,0,0,.08); --line:#e7e7e7; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; background: #fafafa; color: #111; }
+    .wrap { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
+    h1 { font-size: 28px; margin: 0 0 6px; }
+    .sub { color: #555; margin: 0 0 24px; }
+
+    .toolbar { display:flex; gap: var(--gap); flex-wrap: wrap; margin: 18px 0 22px; }
+    .btn { appearance: none; border: 1px solid #ccc; background:#fff; border-radius: 12px; padding: 10px 14px; cursor: pointer; box-shadow: var(--shadow); font-weight: 600; }
+    .btn.primary { background:#111; color:#fff; border-color:#111; }
+    .btn.ghost { background:#fff; color:#111; }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+
+    .card { background:#fff; border:1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding:20px; margin-bottom: 18px; }
+    .card h3 { margin: 0 0 10px; font-size: 18px; }
+
+    .grid { display:grid; gap: var(--gap); }
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    @media (max-width: 840px){ .grid.cols-2, .grid.cols-3 { grid-template-columns: 1fr; } }
+
+    label { display:block; font-weight: 600; margin: 6px 0 8px; }
+    input[type="text"], input[type="email"], select, textarea { width:100%; padding: 10px 12px; border-radius: 10px; border:1px solid #ccc; }
+    textarea { min-height: 76px; }
+
+    .swatches { display:flex; flex-wrap: wrap; gap: 8px; }
+    .swatch { position: relative; width: 36px; height: 36px; border-radius: 999px; border:1px solid rgba(0,0,0,.2); cursor: pointer; }
+    .swatch input { position: absolute; inset:0; opacity:0; cursor: pointer; }
+    .swatch .tick { position:absolute; inset:auto auto -6px -6px; background:#fff; border-radius: 999px; border:1px solid #111; width:18px; height:18px; display:none; align-items:center; justify-content:center; font-size: 12px; font-weight: 800; }
+    .swatch input:checked + .tick { display:flex; }
+
+    .size-table { width:100%; border-collapse: collapse; margin-top: 8px; }
+    .size-table th, .size-table td { border:1px solid var(--line); padding: 8px 10px; text-align: left; }
+    .size-table th { background:#fafafa; font-size: 14px; }
+    .qty-input { width: 76px; }
+    .muted { color:#666; font-size: 13px; }
+    .total { font-weight: 700; }
+
+    .variant { border:1px dashed var(--line); border-radius: 12px; padding: 14px; margin-top: 10px; }
+    .variant-head { display:flex; align-items:center; justify-content: space-between; gap: 10px; }
+    .variant-title { font-weight: 700; }
+
+    .danger { color:#b00020; cursor:pointer; }
+
+    .summary { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background:#0f172a; color:#e5e7eb; padding: 14px; border-radius: 12px; overflow:auto; }
+
+    .modal { position: fixed; inset:0; display:none; align-items: center; justify-content: center; background: rgba(0,0,0,.5); padding: 20px; z-index: 50; }
+    .modal.open { display:flex; }
+    .modal > .dialog { max-width: 760px; width: 100%; background:#fff; border-radius: 16px; box-shadow: var(--shadow); border:1px solid var(--line); }
+    .dialog header { padding: 16px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content: space-between; }
+    .dialog .content { padding: 18px; }
+
+    .help { background: #f6f8ff; border:1px solid #dfe5ff; border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+    .link { color: #0a66c2; text-decoration: underline; }
+    .inline { display:inline-flex; gap:10px; align-items:center; }
+
+    .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 20px; background:#111; color:#fff; padding:10px 14px; border-radius:10px; box-shadow: var(--shadow); opacity:0; pointer-events:none; transition: opacity .25s ease; }
+    .toast.show { opacity:1; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Colour & Size Selection</h1>
+    <p class="sub">Essential Tradie bundle – choose colours and enter size quantities for each item.</p>
+
+    <!-- Customer details -->
+    <div class="card">
+      <h3>Customer Details</h3>
+      <div class="grid cols-3">
+        <div>
+          <label for="custName">Name</label>
+          <input id="custName" type="text" placeholder="Jane Citizen" />
+        </div>
+        <div>
+          <label for="custEmail">Email</label>
+          <input id="custEmail" type="email" placeholder="orders@example.com" />
+        </div>
+        <div>
+          <label for="ref">Order / Quote Ref</label>
+          <input id="ref" type="text" placeholder="MM-1234" />
+        </div>
+      </div>
+    </div>
+
+    <div id="products"></div>
+
+    <div class="toolbar">
+      <button id="copySummary" class="btn ghost">Copy Summary</button>
+      <button id="downloadCSV" class="btn ghost">Download CSV</button>
+    </div>
+
+    <div class="card">
+      <h3>Summary</h3>
+      <div id="summary" class="summary"></div>
+      <p class="muted">Tip: Use <b>Copy Summary</b> or <b>Download CSV</b> for your records.</p>
+    </div>
+
+    <!-- Footer Submit -->
+    <div class="toolbar" id="footerActions">
+      <button id="submitForm" class="btn primary">Submit</button>
+    </div>
+
+    <div class="card help">
+      <strong>How this page works:</strong>
+      <ol>
+        <li>Pre-loaded with the <em>Essential Tradie</em> bundle: 5 × JBS 6HVPS, 2 × AS Colour 5001, 1 × JBS 3FH.</li>
+        <li>Pick colours (two-tone swatches for hi-vis) and enter size quantities.</li>
+        <li>Buttons enable when totals match the bundle allocation.</li>
+      </ol>
+      <p class="muted">Add <code>?order=12345&amp;name=Tracey%20Smith&amp;email=hello%40example.com</code> to pre-fill customer fields.</p>
+    </div>
+  </div>
+
+  <!-- Size Guide Modal -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header>
+        <h3 id="modalTitle">Size Guide</h3>
+        <button id="closeModal" class="btn">Close</button>
+      </header>
+      <div class="content" id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+  // ===== External submission endpoint (optional) ================================================
+  // Set to your Formspree or Basin endpoint to receive submissions, e.g.:
+  //   const FORM_ENDPOINT = "https://formspree.io/f/abcde123";
+  // Leave blank to use the fallback (copies summary + downloads CSV locally).
+  const FORM_ENDPOINT = "";
+
+  // ==== CONFIGURE YOUR PRODUCTS HERE ============================================================
+  const PRODUCTS = [
+    {
+      id: "JBS-6HVPS",
+      name: "JB's Hi Vis S/S Traditional Polo (6HVPS)",
+      colours: [
+        { code: "LIM/BLK", name: "Lime/Black",  hexPair: ["#a6ce39","#000000"] },
+        { code: "LIM/NVY", name: "Lime/Navy",   hexPair: ["#a6ce39","#1b2a41"] },
+        { code: "LIM/CHR", name: "Lime/Charcoal", hexPair: ["#a6ce39","#4a4a4a"] },
+        { code: "LIM/ROY", name: "Lime/Royal",  hexPair: ["#a6ce39","#1d4ed8"] },
+        { code: "LIM/MAR", name: "Lime/Maroon", hexPair: ["#a6ce39","#800000"] },
+        { code: "LIM/BOT", name: "Lime/Bottle", hexPair: ["#a6ce39","#0b4f3f"] },
+        { code: "ORG/NVY", name: "Orange/Navy", hexPair: ["#ff6a00","#1b2a41"] },
+        { code: "ORG/BLK", name: "Orange/Black",hexPair: ["#ff6a00","#000000"] }
+      ],
+      sizes: ["2XS","XS","S","M","L","XL","2XL","3XL","4XL","5XL","6/7XL"],
+      sizeGuide: {
+        externalUrl: "https://www.jbswear.com.au/product-detail/-in-product/6HVPS",
+        inline: null
+      }
+    },
+    {
+      id: "AS-5001",
+      name: "AS Colour Staple Tee (5001)",
+      colours: [
+        { code: "BLK", name: "Black", hex: "#000000" },
+        { code: "WHT", name: "White", hex: "#ffffff" },
+        { code: "NVY", name: "Navy",  hex: "#1b2a41" },
+        { code: "CHR", name: "Charcoal", hex: "#4a4a4a" },
+        { code: "ARM", name: "Army", hex: "#4b5320" },
+        { code: "ASH", name: "Asphalt", hex: "#3e3e3e" },
+        { code: "GML", name: "Grey Marle", hex: "#cfcfcf" }
+      ],
+      sizes: ["XS","S","M","L","XL","2XL","3XL"],
+      sizeGuide: {
+        externalUrl: "https://www.ascolour.com.au/staple-tee-5001/",
+        inline: null
+      }
+    },
+    {
+      id: "JBS-3FH",
+      name: "JB's Fleecy Hoodie (3FH)",
+      colours: [
+        { code: "BLK", name: "Black", hex: "#000000" },
+        { code: "NVY", name: "Navy",  hex: "#1b2a41" },
+        { code: "ROY", name: "Royal", hex: "#1d4ed8" },
+        { code: "RED", name: "Red", hex: "#d11a2a" },
+        { code: "BOT", name: "Bottle", hex: "#0b4f3f" },
+        { code: "CHM", name: "Charcoal Marle", hex: "#5b5b5b" }
+      ],
+      sizes: ["2XS","XS","S","M","L","XL","2XL","3XL","4XL","5XL","6/7XL","8/9XL","10/11XL","12/13XL"],
+      sizeGuide: {
+        externalUrl: "https://www.jbswear.com.au/product-detail/-in-product/3FH",
+        inline: null
+      }
+    }
+  ];
+
+  // ==== Bundles =================================================================================
+  const BUNDLES = {
+    "essential-tradie": {
+      label: "Essential Tradie Bundle",
+      products: ["JBS-6HVPS","AS-5001","JBS-3FH"],
+      quantities: { "JBS-6HVPS": 5, "AS-5001": 2, "JBS-3FH": 1 }
+    }
+  };
+
+  // ===== Helpers ===============================================================================
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+  const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+
+  function getParam(name){
+    var m = (location.search || '').match(new RegExp('[?&]'+name+'=([^&]+)'));
+    return m ? decodeURIComponent(m[1].replace(/\+/g,' ')) : null;
+  }
+
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+
+  // ===== DOM handles ===========================================================================
+  const productsDiv = document.getElementById('products');
+  const summaryDiv = document.getElementById('summary');
+  const copyBtn = document.getElementById('copySummary');
+  const csvBtn = document.getElementById('downloadCSV');
+  const submitBtn = document.getElementById('submitForm');
+
+  const modal = document.getElementById('modal');
+  const modalContent = document.getElementById('modalContent');
+  const closeModalBtn = document.getElementById('closeModal');
+  const wrap = document.querySelector('.wrap');
+
+  let allowedProducts = [];
+  let activeBundleKey = null;
+  let activeBundleQuantities = {};
+
+  function getProductList(){
+    if (Array.isArray(allowedProducts) && allowedProducts.length) {
+      return PRODUCTS.filter(p => allowedProducts.includes(p.id));
+    }
+    return PRODUCTS;
+  }
+
+  // === Bundle allocation helpers ===
+  function getRequired(pid){ return activeBundleQuantities && activeBundleQuantities[pid] ? activeBundleQuantities[pid] : 0; }
+  function productTotal(pid){
+    return $$(`input.qty-input[data-prod="${pid}"]`).reduce((acc, inp) => acc + (parseInt(inp.value||'0',10)||0), 0);
+  }
+  function updateBundleInfoForProduct(pid){
+    if(!activeBundleKey) return;
+    const req = getRequired(pid);
+    const total = productTotal(pid);
+    const remain = Math.max(0, req - total);
+    $$('#products .card').forEach(block => {
+      const sel = block.querySelector('select');
+      if(sel && sel.value === pid){
+        const info = block.querySelector('[data-role="bundleInfo"]');
+        if(info){ info.textContent = `Bundle allocation: Required ${req}  |  Selected ${total}  |  Remaining ${remain}`; }
+      }
+    });
+  }
+  function validateBundle(){
+    if(!activeBundleKey){ copyBtn.disabled = false; csvBtn.disabled = false; if(submitBtn) submitBtn.disabled = false; return true; }
+    let ok = true;
+    Object.keys(activeBundleQuantities).forEach(pid => {
+      if(productTotal(pid) !== getRequired(pid)) ok = false;
+    });
+    copyBtn.disabled = !ok; csvBtn.disabled = !ok; if(submitBtn) submitBtn.disabled = !ok;
+    return ok;
+  }
+  function enforceAllocation(pid, changedInput){
+    if(!activeBundleKey) return;
+    const req = getRequired(pid);
+    if(!req) return;
+    const inputs = $$(`input.qty-input[data-prod="${pid}"]`);
+    let total = inputs.reduce((a,i)=> a + (parseInt(i.value||'0',10)||0), 0);
+    if(total > req){
+      const over = total - req;
+      const cur = parseInt(changedInput.value||'0',10)||0;
+      const newVal = Math.max(0, cur - over);
+      changedInput.value = newVal;
+    }
+    updateBundleInfoForProduct(pid);
+    validateBundle();
+  }
+
+  // ===== Renderers ============================================================================
+  function renderProductBlock(presetProductId){
+    const blockId = uid();
+    const block = document.createElement('div');
+    block.className = 'card';
+    block.dataset.blockId = blockId;
+
+    const productSelectId = `product-${blockId}`;
+
+    block.innerHTML = `
+      <div class="grid cols-2">
+        <div>
+          <label for="${productSelectId}">Product (code – name)</label>
+          <select id="${productSelectId}">
+            ${getProductList().map(p => `<option value="${p.id}">[${p.id}] ${p.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="inline" style="justify-content: flex-end; align-items: end; gap:10px;">
+          <button class="btn" data-action="sizeGuide">Size Guide</button>
+          <button class="btn danger" data-action="removeProduct">Remove Product</button>
+        </div>
+      </div>
+      <div class="variants"></div>
+      <div class="muted" style="margin-top:8px;">Add one or more colour variants for this product (each variant has its own size table).</div>
+      <div class="muted" data-role="bundleInfo" style="margin-top:6px;"></div>
+    `;
+
+    productsDiv.appendChild(block);
+
+    // Preselect & lock in bundle mode
+    const selectEl = block.querySelector('select');
+    if(presetProductId){ selectEl.value = presetProductId; }
+    if(activeBundleKey){
+      selectEl.disabled = true;
+      const removeBtn = block.querySelector('button[data-action="removeProduct"]');
+      if(removeBtn) removeBtn.style.display = 'none';
+    }
+
+    // Add initial variant
+    addVariant(block);
+
+    block.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      const action = btn.dataset.action;
+      if(action === 'sizeGuide') openSizeGuide(getSelectedProduct(block));
+      if(action === 'removeProduct'){ block.remove(); updateSummary(); }
+    });
+
+    block.querySelector('select').addEventListener('change', () => {
+      const variantsWrap = block.querySelector('.variants');
+      variantsWrap.innerHTML = '';
+      addVariant(block);
+      updateSummary();
+    });
+  }
+
+  function getSelectedProduct(block){
+    const id = block.querySelector('select').value;
+    return PRODUCTS.find(p => p.id === id) || PRODUCTS[0];
+  }
+
+  function addVariant(block){
+    const prod = getSelectedProduct(block);
+    const variantId = uid();
+    const variantsWrap = block.querySelector('.variants');
+
+    const vDiv = document.createElement('div');
+    vDiv.className = 'variant';
+    vDiv.dataset.variantId = variantId;
+
+    // Build two-tone aware swatches
+    const swatchesMarkup = prod.colours.map((c, i) => {
+      const bg = (c.hexPair && c.hexPair.length === 2)
+        ? `linear-gradient(135deg, ${c.hexPair[0]} 0 50%, ${c.hexPair[1]} 50% 100%)`
+        : (c.hex || '#ffffff');
+      return `
+        <label class="swatch" title="${c.name}">
+          <input type="radio" name="colour-${variantId}" value="${c.code}|${c.name}" ${i===0?'checked':''} />
+          <span class="tick">✓</span>
+          <span aria-hidden="true" style="position:absolute;inset:0;border-radius:999px;background:${bg}"></span>
+        </label>`;
+    }).join('');
+
+    vDiv.innerHTML = `
+      <div class="variant-head">
+        <div class="variant-title">Colour Variant</div>
+        <button class="btn danger" data-action="removeVariant">Remove Variant</button>
+      </div>
+      <div>
+        <label>Choose Colour</label>
+        <div class="swatches" role="radiogroup" aria-label="Colours">${swatchesMarkup}</div>
+      </div>
+      <div style="margin-top:10px;">
+        <label>Sizes & Quantities</label>
+        ${renderSizeTable(prod.sizes, variantId, prod.id)}
+      </div>
+    `;
+
+    variantsWrap.appendChild(vDiv);
+
+    vDiv.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if(!btn) return;
+      if(btn.dataset.action === 'removeVariant'){ vDiv.remove(); updateSummary(); }
+    });
+
+    $$("input[type='number']", vDiv).forEach(inp => inp.addEventListener('input', (e) => {
+      updateSummary();
+      enforceAllocation(prod.id, e.target);
+    }));
+
+    updateBundleInfoForProduct(prod.id);
+    updateSummary();
+  }
+
+  function renderSizeTable(sizes, variantId, productId){
+    const rows = sizes.map(s => `
+      <tr>
+        <td>${s}</td>
+        <td><input class="qty-input" type="number" inputmode="numeric" min="0" step="1" value="0" data-size="${s}" data-variant="${variantId}" data-prod="${productId}" /></td>
+      </tr>
+    `).join('');
+
+    return `
+      <table class="size-table" aria-label="Size quantities">
+        <thead><tr><th>Size</th><th>Qty</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function openSizeGuide(prod){
+    if(!prod) return;
+    $('#modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
+    const sg = prod.sizeGuide || {};
+
+    if(sg.externalUrl){
+      modalContent.innerHTML = `
+        <p>Open the official size guide for <strong>${prod.name}</strong> using the link below:</p>
+        <p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>
+      `;
+    } else if (sg.inline){
+      const { caption, headers, rows, note } = sg.inline;
+      modalContent.innerHTML = `
+        <p class="muted">${caption || ''}</p>
+        <div style="overflow:auto;">
+          <table class="size-table" aria-label="Size guide table">
+            <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${rows.map(r => `<tr>${r.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${note ? `<p class="muted" style="margin-top:8px;">${note}</p>` : ''}
+      `;
+    } else {
+      modalContent.innerHTML = `<p>No size guide configured for this product yet.</p>`;
+    }
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal(){
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+  closeModalBtn.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+
+  function collectData(){
+    const data = {
+      customer: {
+        name: $('#custName').value.trim(),
+        email: $('#custEmail').value.trim(),
+        ref: $('#ref').value.trim()
+      },
+      items: []
+    };
+
+    $$('#products .card').forEach(block => {
+      const prod = getSelectedProduct(block);
+      $$('.variant', block).forEach(variantDiv => {
+        const colourInput = $(`input[name='colour-${variantDiv.dataset.variantId}']:checked`, variantDiv);
+        const [colourCode, colourName] = colourInput ? colourInput.value.split('|') : ["", ""];
+
+        const sizes = {};
+        let total = 0;
+        $$("input[type='number']", variantDiv).forEach(inp => {
+          const qty = parseInt(inp.value || '0', 10) || 0;
+          if(qty>0){ sizes[inp.dataset.size] = qty; total += qty; }
+        });
+
+        data.items.push({
+          productId: prod.id,
+          productName: prod.name,
+          colourCode,
+          colourName,
+          sizes,
+          total
+        });
+      });
+    });
+    return data;
+  }
+
+  function updateSummary(){
+    const data = collectData();
+
+    let lines = [];
+    if(data.customer.name || data.customer.ref){
+      lines.push(`Customer: ${data.customer.name || '-'}  |  Ref: ${data.customer.ref || '-'}`);
+    }
+    if(data.customer.email){ lines.push(`Email: ${data.customer.email}`); }
+    if(lines.length) lines.push('');
+
+    if(data.items.length === 0){
+      summaryDiv.textContent = activeBundleKey ? 'No items yet. Enter quantities by size.' : 'No items yet.';
+      return;
+    }
+
+    data.items.forEach((it, idx) => {
+      const sizePairs = Object.entries(it.sizes).map(([s,q]) => `${s}:${q}`).join(', ');
+      lines.push(`${idx+1}. [${it.productId}] ${it.productName}  –  ${it.colourName || 'Colour ?'}  |  Total: ${it.total || 0}`);
+      lines.push(`   Sizes → ${sizePairs || 'None'}`);
+      lines.push('');
+    });
+
+    const grandTotal = data.items.reduce((acc, it) => acc + (it.total||0), 0);
+    lines.push(`TOTAL UNITS: ${grandTotal}`);
+
+    summaryDiv.textContent = lines.join('\n');
+  }
+
+  function toCSV(){
+    const data = collectData();
+    const rows = [
+      ['Product ID','Product Name','Colour Code','Colour Name','Size','Qty']
+    ];
+    data.items.forEach(it => {
+      const sizes = Object.keys(it.sizes);
+      if(sizes.length === 0){
+        rows.push([it.productId, it.productName, it.colourCode, it.colourName, '', 0]);
+      } else {
+        sizes.forEach(size => {
+          rows.push([it.productId, it.productName, it.colourCode, it.colourName, size, it.sizes[size]]);
+        });
+      }
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    return csv;
+  }
+
+  function toast(msg){
+    let t = document.querySelector('.toast');
+    if(!t){ t = document.createElement('div'); t.className='toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 2400);
+  }
+
+  async function handleSubmit(){
+    const ok = validateBundle();
+    if(!ok){ alert('Please complete the required bundle quantities before submitting.'); return; }
+    const data = collectData();
+    const payload = {
+      bundle: activeBundleKey || 'essential-tradie',
+      submittedAt: new Date().toISOString(),
+      context: {
+        order: getParam('order') || '',
+        name_param: getParam('name') || '',
+        email_param: getParam('email') || ''
+      },
+      customer: data.customer,
+      items: data.items
+    };
+
+    if(FORM_ENDPOINT){
+      try{
+        const resp = await fetch(FORM_ENDPOINT, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if(!resp.ok) throw new Error('Server responded ' + resp.status);
+        toast('Submitted! Thanks — we’ll be in touch.');
+      } catch(err){
+        alert('Submit failed: ' + err.message + '\nWe have copied your summary and downloaded a CSV as a fallback.');
+        try { await navigator.clipboard.writeText(summaryDiv.textContent || ''); } catch(e){}
+        const blob = new Blob([toCSV()], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `order-sizes-${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      try { await navigator.clipboard.writeText(summaryDiv.textContent || ''); } catch(e){}
+      const blob = new Blob([toCSV()], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `order-sizes-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast('Summary copied & CSV downloaded.');
+    }
+  }
+
+  // === Init (defaults to essential-tradie) =====================================================
+  function init(){
+    document.body.classList.add('bundle-mode');
+    const bundleKey = 'essential-tradie';
+    allowedProducts = BUNDLES[bundleKey].products.slice();
+    activeBundleKey = bundleKey;
+    activeBundleQuantities = Object.assign({}, BUNDLES[bundleKey].quantities || {});
+
+    allowedProducts.forEach(pid => renderProductBlock(pid));
+
+    const banner = document.createElement('div');
+    banner.className = 'card';
+    var allocationsStr = Object.keys(activeBundleQuantities||{}).map(function(k){ return '['+k+'='+activeBundleQuantities[k]+']'; }).join(' ');
+    banner.innerHTML = '<div><strong>Bundle:</strong> ' + (BUNDLES[bundleKey].label || bundleKey) + ' — locked to ' + allowedProducts.length + ' product(s). Allocations: ' + allocationsStr + '</div>';
+    wrap.insertBefore(banner, document.querySelector('#products'));
+
+    // Prefill from URL if provided
+    var preName = getParam('name'); if(preName) $('#custName').value = preName;
+    var preEmail = getParam('email'); if(preEmail) $('#custEmail').value = preEmail;
+    var preOrder = getParam('order'); if(preOrder) $('#ref').value = preOrder;
+
+    validateBundle();
+  }
+
+  // Event bindings
+  document.addEventListener('DOMContentLoaded', init);
+  document.getElementById('copySummary').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(summaryDiv.textContent || '');
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => (copyBtn.textContent = 'Copy Summary'), 1500);
+    } catch (e) { alert('Copy failed. Please select and copy manually.'); }
+  });
+  document.getElementById('downloadCSV').addEventListener('click', () => {
+    const blob = new Blob([toCSV()], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `order-sizes-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('submitForm').addEventListener('click', handleSubmit);
+  </script>
+</body>
+</html>
