@@ -30,11 +30,14 @@
     input[type="text"], input[type="email"], select, textarea { width:100%; padding: 10px 12px; border-radius: 10px; border:1px solid #ccc; }
     textarea { min-height: 76px; }
 
-    .swatches { display:flex; flex-wrap: wrap; gap: 8px; }
+    .swatches { display:grid; gap: 14px 18px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .swatch-item { display:flex; flex-direction: column; align-items: center; gap: 8px; }
     .swatch { position: relative; width: 36px; height: 36px; border-radius: 999px; border:1px solid rgba(0,0,0,.2); cursor: pointer; }
     .swatch input { position: absolute; inset:0; opacity:0; cursor: pointer; }
     .swatch .tick { position:absolute; inset:auto auto -6px -6px; background:#fff; border-radius: 999px; border:1px solid #111; width:18px; height:18px; display:none; align-items:center; justify-content:center; font-size: 12px; font-weight: 800; }
     .swatch input:checked + .tick { display:flex; }
+    .swatch .swatch-bg { position:absolute; inset:0; border-radius: 999px; }
+    .swatch-name { font-size: 12px; color:#333; text-align: center; line-height: 1.2; }
 
     .size-table { width:100%; border-collapse: collapse; margin-top: 8px; }
     .size-table th, .size-table td { border:1px solid var(--line); padding: 8px 10px; text-align: left; }
@@ -44,8 +47,7 @@
     .total { font-weight: 700; }
 
     .variant { border:1px dashed var(--line); border-radius: 12px; padding: 14px; margin-top: 10px; }
-    .variant-head { display:flex; align-items:center; justify-content: space-between; gap: 10px; }
-    .variant-title { font-weight: 700; }
+    .variant-title { font-weight: 700; margin-bottom: 8px; }
 
     .danger { color:#b00020; cursor:pointer; }
 
@@ -106,7 +108,7 @@
     </div>
   </div>
 
-  <!-- Size Guide Modal -->
+  <!-- Size Guide Modal (fallback) -->
   <div id="modal" class="modal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <header>
@@ -230,7 +232,7 @@
       const sel = block.querySelector('select');
       if(sel && sel.value === pid){
         const info = block.querySelector('[data-role="bundleInfo"]');
-        if(info){ info.textContent = `Bundle allocation: Required ${req}  |  Selected ${total}  |  Remaining ${remain}`; }
+        if(info){ info.textContent = `Required ${req}  |  Selected ${total}  |  Remaining ${remain}`; }
       }
     });
   }
@@ -270,7 +272,7 @@
     block.innerHTML = `
       <div class="grid cols-2">
         <div>
-          <label for="${productSelectId}">Product (code – name)</label>
+          <label for="${productSelectId}">Product</label>
           <select id="${productSelectId}">
             ${getProductList().map(p => `<option value="${p.id}">[${p.id}] ${p.name}</option>`).join('')}
           </select>
@@ -330,18 +332,18 @@
         ? `linear-gradient(135deg, ${c.hexPair[0]} 0 50%, ${c.hexPair[1]} 50% 100%)`
         : (c.hex || '#ffffff');
       return `
-        <label class="swatch" title="${c.name}">
-          <input type="radio" name="colour-${variantId}" value="${c.code}|${c.name}" ${i===0?'checked':''} />
-          <span class="tick">✓</span>
-          <span aria-hidden="true" style="position:absolute;inset:0;border-radius:999px;background:${bg}"></span>
+        <label class="swatch-item" title="${c.name}">
+          <span class="swatch">
+            <input type="radio" name="colour-${variantId}" value="${c.code}|${c.name}" ${i===0?'checked':''} />
+            <span class="tick">✓</span>
+            <span aria-hidden="true" class="swatch-bg" style="background:${bg}"></span>
+          </span>
+          <span class="swatch-name">${c.name}</span>
         </label>`;
     }).join('');
 
     vDiv.innerHTML = `
-      <div class="variant-head">
-        <div class="variant-title">Colour Variant</div>
-        <button class="btn danger" data-action="removeVariant">Remove Variant</button>
-      </div>
+      <div class="variant-title">Colour Variant</div>
       <div>
         <label>Choose Colour</label>
         <div class="swatches" role="radiogroup" aria-label="Colours">${swatchesMarkup}</div>
@@ -353,11 +355,6 @@
     `;
 
     variantsWrap.appendChild(vDiv);
-
-    vDiv.addEventListener('click', (e) => {
-      const btn = e.target.closest('button'); if(!btn) return;
-      if(btn.dataset.action === 'removeVariant'){ vDiv.remove(); updateSummary(); }
-    });
 
     $$("input[type='number']", vDiv).forEach(inp => inp.addEventListener('input', (e) => {
       updateSummary();
@@ -386,15 +383,25 @@
 
   function openSizeGuide(prod){
     if(!prod) return;
-    $('#modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
     const sg = prod.sizeGuide || {};
 
     if(sg.externalUrl){
+      // Try quick-view popup
+      const w = window.open(sg.externalUrl, 'sizeGuide', 'width=920,height=720,noopener,resizable=yes,scrollbars=yes');
+      if(w){ try { w.focus(); } catch(e){} return; }
+      // Fallback to modal if popup blocked
+      $('#modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
       modalContent.innerHTML = `
-        <p>Open the official size guide for <strong>${prod.name}</strong> using the link below:</p>
+        <p>Open the official size guide for <strong>${prod.name}</strong>:</p>
         <p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>
       `;
-    } else if (sg.inline){
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    // Inline (rare)
+    if (sg.inline){
+      $('#modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
       const { caption, headers, rows, note } = sg.inline;
       modalContent.innerHTML = `
         <div style="overflow:auto;">
@@ -407,17 +414,14 @@
         </div>
         ${note ? `<p class="muted" style="margin-top:8px;">${note}</p>` : ''}
       `;
-    } else {
-      modalContent.innerHTML = `<p>No size guide configured for this product yet.</p>`;
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
     }
-
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
   }
 
   function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
   modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
-  closeModalBtn.addEventListener('click', closeModal);
+  document.getElementById('closeModal').addEventListener('click', closeModal);
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
 
   function collectData(){
@@ -567,10 +571,10 @@
 
     allowedProducts.forEach(pid => renderProductBlock(pid));
 
+    // Clean banner (no allocations text)
     const banner = document.createElement('div');
     banner.className = 'card';
-    var allocationsStr = Object.keys(activeBundleQuantities||{}).map(function(k){ return '['+k+'='+activeBundleQuantities[k]+']'; }).join(' ');
-    banner.innerHTML = '<div><strong>Bundle:</strong> ' + (BUNDLES[bundleKey].label || bundleKey) + ' — locked to ' + allowedProducts.length + ' product(s). Allocations: ' + allocationsStr + '</div>';
+    banner.innerHTML = '<div><strong>Bundle:</strong> ' + (BUNDLES[bundleKey].label || bundleKey) + '</div>';
     wrap.insertBefore(banner, document.querySelector('#products'));
 
     var preName = getParam('name'); if(preName) $('#custName').value = preName;
