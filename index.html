@@ -8,7 +8,9 @@
     :root { --gap: 14px; --radius: 14px; --shadow: 0 6px 22px rgba(0,0,0,.08); --line:#e7e7e7; }
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; background: #fafafa; color: #111; }
-    .wrap { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 60px; }
+    .site-header { display:flex; align-items:center; gap:12px; padding: 18px 0 8px; }
+    .site-header img { height: 44px; width: auto; display:block; }
     h1 { font-size: 28px; margin: 0 0 6px; }
     .sub { color: #555; margin: 0 0 24px; }
 
@@ -69,6 +71,10 @@
 </head>
 <body>
   <div class="wrap">
+    <header class="site-header">
+      <img id="brandLogo" alt="Your Business Logo" src="" />
+    </header>
+
     <h1>Colour & Size Selection</h1>
     <p class="sub">Essential Tradie bundle</p>
 
@@ -122,6 +128,12 @@
 
   <script>
   const FORM_ENDPOINT = "";
+
+  // ====== Logo config ======
+  // Put your logo file in the repo (e.g., /logo.png) and set LOGO_SRC.
+  // You can also override with a URL parameter: ?logo=https://.../logo.png
+  const LOGO_SRC_DEFAULT = "/logo.png";
+  const LOGO_ALT = "Your Business Logo";
 
   // Provide relative paths to JPEGs you'll upload to your repo (e.g., /sizeguides/*.jpg)
   const PRODUCTS = [
@@ -209,6 +221,7 @@
   const modalContent = document.getElementById('modalContent');
   const closeModalBtn = document.getElementById('closeModal');
   const wrap = document.querySelector('.wrap');
+  const brandLogo = document.getElementById('brandLogo');
 
   let allowedProducts = [];
   let activeBundleKey = null;
@@ -387,10 +400,8 @@
     if(!prod) return;
     const sg = prod.sizeGuide || {};
 
-    // Prepare modal title
     document.getElementById('modalTitle').textContent = `[${prod.id}] ${prod.name} – Size Guide`;
 
-    // Try to load image first
     if(sg.image){
       const img = new Image();
       img.className = 'size-img';
@@ -405,7 +416,6 @@
         }
       };
       img.onerror = function(){
-        // Fallback to link if image missing
         if(sg.externalUrl){
           modalContent.innerHTML = `<p class="muted">Size guide image not found. You can open it on the supplier’s site:</p>
             <p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>`;
@@ -414,13 +424,11 @@
         }
       };
       img.src = sg.image;
-      // Open modal immediately while image loads
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
       return;
     }
 
-    // If no image, but external link provided
     if(sg.externalUrl){
       modalContent.innerHTML = `<p><a class="link" target="_blank" rel="noopener" href="${sg.externalUrl}">Open Size Guide</a></p>`;
       modal.classList.add('open');
@@ -428,7 +436,6 @@
       return;
     }
 
-    // Nothing configured
     modalContent.innerHTML = `<p>No size guide configured for this product yet.</p>`;
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
@@ -578,6 +585,16 @@
   }
 
   function init(){
+    // Logo setup
+    const urlOverride = getParam('logo');
+    const src = urlOverride || LOGO_SRC_DEFAULT;
+    brandLogo.alt = LOGO_ALT;
+    brandLogo.src = src;
+    brandLogo.addEventListener('error', () => {
+      const hdr = brandLogo.closest('.site-header');
+      if(hdr) hdr.style.display = 'none';
+    });
+
     document.body.classList.add('bundle-mode');
     const bundleKey = 'essential-tradie';
     allowedProducts = BUNDLES[bundleKey].products.slice();
@@ -586,15 +603,14 @@
 
     allowedProducts.forEach(pid => renderProductBlock(pid));
 
-    // Clean banner (no allocations text)
     const banner = document.createElement('div');
     banner.className = 'card';
     banner.innerHTML = '<div><strong>Bundle:</strong> ' + (BUNDLES[bundleKey].label || bundleKey) + '</div>';
-    wrap.insertBefore(banner, document.querySelector('#products'));
+    document.querySelector('.wrap').insertBefore(banner, document.getElementById('products'));
 
-    var preName = getParam('name'); if(preName) $('#custName').value = preName;
-    var preEmail = getParam('email'); if(preEmail) $('#custEmail').value = preEmail;
-    var preOrder = getParam('order'); if(preOrder) $('#ref').value = preOrder;
+    var preName = getParam('name'); if(preName) document.getElementById('custName').value = preName;
+    var preEmail = getParam('email'); if(preEmail) document.getElementById('custEmail').value = preEmail;
+    var preOrder = getParam('order'); if(preOrder) document.getElementById('ref').value = preOrder;
 
     validateBundle();
   }
