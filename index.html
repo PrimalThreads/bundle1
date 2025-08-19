@@ -57,7 +57,6 @@
     .dialog header { padding: 16px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content: space-between; }
     .dialog .content { padding: 18px; }
 
-    .help { background: #f6f8ff; border:1px solid #dfe5ff; border-radius: 12px; padding: 12px 14px; font-size: 14px; }
     .link { color: #0a66c2; text-decoration: underline; }
     .inline { display:inline-flex; gap:10px; align-items:center; }
 
@@ -68,7 +67,7 @@
 <body>
   <div class="wrap">
     <h1>Colour & Size Selection</h1>
-    <p class="sub">Essential Tradie bundle – choose colours and enter size quantities for each item.</p>
+    <p class="sub">Essential Tradie bundle</p>
 
     <!-- Customer details -->
     <div class="card">
@@ -99,22 +98,11 @@
     <div class="card">
       <h3>Summary</h3>
       <div id="summary" class="summary"></div>
-      <p class="muted">Tip: Use <b>Copy Summary</b> or <b>Download CSV</b> for your records.</p>
     </div>
 
     <!-- Footer Submit -->
     <div class="toolbar" id="footerActions">
       <button id="submitForm" class="btn primary">Submit</button>
-    </div>
-
-    <div class="card help">
-      <strong>How this page works:</strong>
-      <ol>
-        <li>Pre-loaded with the <em>Essential Tradie</em> bundle: 5 × JBS 6HVPS, 2 × AS Colour 5001, 1 × JBS 3FH.</li>
-        <li>Pick colours (two-tone swatches for hi-vis) and enter size quantities.</li>
-        <li>Buttons enable when totals match the bundle allocation.</li>
-      </ol>
-      <p class="muted">Add <code>?order=12345&amp;name=Tracey%20Smith&amp;email=hello%40example.com</code> to pre-fill customer fields.</p>
     </div>
   </div>
 
@@ -130,13 +118,8 @@
   </div>
 
   <script>
-  // ===== External submission endpoint (optional) ================================================
-  // Set to your Formspree or Basin endpoint to receive submissions, e.g.:
-  //   const FORM_ENDPOINT = "https://formspree.io/f/abcde123";
-  // Leave blank to use the fallback (copies summary + downloads CSV locally).
   const FORM_ENDPOINT = "";
 
-  // ==== CONFIGURE YOUR PRODUCTS HERE ============================================================
   const PRODUCTS = [
     {
       id: "JBS-6HVPS",
@@ -194,7 +177,6 @@
     }
   ];
 
-  // ==== Bundles =================================================================================
   const BUNDLES = {
     "essential-tradie": {
       label: "Essential Tradie Bundle",
@@ -203,7 +185,6 @@
     }
   };
 
-  // ===== Helpers ===============================================================================
   const $ = (sel, ctx=document) => ctx.querySelector(sel);
   const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
 
@@ -214,7 +195,6 @@
 
   function uid(){ return Math.random().toString(36).slice(2,9); }
 
-  // ===== DOM handles ===========================================================================
   const productsDiv = document.getElementById('products');
   const summaryDiv = document.getElementById('summary');
   const copyBtn = document.getElementById('copySummary');
@@ -237,7 +217,6 @@
     return PRODUCTS;
   }
 
-  // === Bundle allocation helpers ===
   function getRequired(pid){ return activeBundleQuantities && activeBundleQuantities[pid] ? activeBundleQuantities[pid] : 0; }
   function productTotal(pid){
     return $$(`input.qty-input[data-prod="${pid}"]`).reduce((acc, inp) => acc + (parseInt(inp.value||'0',10)||0), 0);
@@ -280,7 +259,6 @@
     validateBundle();
   }
 
-  // ===== Renderers ============================================================================
   function renderProductBlock(presetProductId){
     const blockId = uid();
     const block = document.createElement('div');
@@ -303,13 +281,11 @@
         </div>
       </div>
       <div class="variants"></div>
-      <div class="muted" style="margin-top:8px;">Add one or more colour variants for this product (each variant has its own size table).</div>
       <div class="muted" data-role="bundleInfo" style="margin-top:6px;"></div>
     `;
 
     productsDiv.appendChild(block);
 
-    // Preselect & lock in bundle mode
     const selectEl = block.querySelector('select');
     if(presetProductId){ selectEl.value = presetProductId; }
     if(activeBundleKey){
@@ -318,7 +294,6 @@
       if(removeBtn) removeBtn.style.display = 'none';
     }
 
-    // Add initial variant
     addVariant(block);
 
     block.addEventListener('click', (e) => {
@@ -350,7 +325,6 @@
     vDiv.className = 'variant';
     vDiv.dataset.variantId = variantId;
 
-    // Build two-tone aware swatches
     const swatchesMarkup = prod.colours.map((c, i) => {
       const bg = (c.hexPair && c.hexPair.length === 2)
         ? `linear-gradient(135deg, ${c.hexPair[0]} 0 50%, ${c.hexPair[1]} 50% 100%)`
@@ -423,7 +397,6 @@
     } else if (sg.inline){
       const { caption, headers, rows, note } = sg.inline;
       modalContent.innerHTML = `
-        <p class="muted">${caption || ''}</p>
         <div style="overflow:auto;">
           <table class="size-table" aria-label="Size guide table">
             <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
@@ -442,10 +415,7 @@
     modal.setAttribute('aria-hidden', 'false');
   }
 
-  function closeModal(){
-    modal.classList.remove('open');
-    modal.setAttribute('aria-hidden', 'true');
-  }
+  function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
   modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
   closeModalBtn.addEventListener('click', closeModal);
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
@@ -588,7 +558,6 @@
     }
   }
 
-  // === Init (defaults to essential-tradie) =====================================================
   function init(){
     document.body.classList.add('bundle-mode');
     const bundleKey = 'essential-tradie';
@@ -604,7 +573,6 @@
     banner.innerHTML = '<div><strong>Bundle:</strong> ' + (BUNDLES[bundleKey].label || bundleKey) + ' — locked to ' + allowedProducts.length + ' product(s). Allocations: ' + allocationsStr + '</div>';
     wrap.insertBefore(banner, document.querySelector('#products'));
 
-    // Prefill from URL if provided
     var preName = getParam('name'); if(preName) $('#custName').value = preName;
     var preEmail = getParam('email'); if(preEmail) $('#custEmail').value = preEmail;
     var preOrder = getParam('order'); if(preOrder) $('#ref').value = preOrder;
@@ -612,7 +580,6 @@
     validateBundle();
   }
 
-  // Event bindings
   document.addEventListener('DOMContentLoaded', init);
   document.getElementById('copySummary').addEventListener('click', async () => {
     try {
